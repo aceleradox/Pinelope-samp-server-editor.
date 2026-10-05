@@ -1,0 +1,8 @@
+# ARQUIVO DE CONFIGURAÇÃO INTERNA DA PINELLOPE.JS
+server_mode=samp
+pawn_version=0.3.7
+mta_version=1.6
+base_include=zcmd
+auto_fix_syntax=true
+max_tokens_limit=1500
+temperature_profile=0.3
