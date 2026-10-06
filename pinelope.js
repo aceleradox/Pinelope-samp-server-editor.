@@ -8,8 +8,7 @@ const caminhoPrompt = path.join(diretorioServidor, 'prompt.txt');
 const caminhoConfigSub = path.join(diretorioServidor, 'conf.sub15');
 const caminhoJsonLog = path.join(diretorioServidor, 'subscript.json');
 
-// CORREÇÃO MÁXIMA: Garante o travamento do CMD logo no início do arquivo
-// Mesmo que tudo dê errado abaixo, o Node NÃO vai fechar a janela
+// Mantém a janela ativa para diagnóstico mesmo após falhas
 setInterval(() => {}, 3600000);
 
 function lerConfiguracaoSub15() {
@@ -26,12 +25,13 @@ async function iniciarPinelope() {
     console.log("==========================================================");
     
     try {
-        // Importação dinâmica protegida para evitar travamento de CommonJS/ESM
         const transformers = await import('@xenova/transformers');
         const pipeline = transformers.pipeline;
         
-        console.log("⏳ Inicializando modelo Qwen (Aguarde alguns segundos)...");
-        geradorIA = await pipeline('text-generation', 'Xenova/Qwen1.5-0.5B-Chat'); 
+        console.log("⏳ Inicializando Motor Super Leve GPT2 Geral (Aguarde)...");
+        
+        // CORREÇÃO: Usando o modelo público sem travas de autorização
+        geradorIA = await pipeline('text-generation', 'Xenova/gpt2'); 
         
         console.log("\n🤖 PINELLOPE.JS ASSÍNCRONA ONLINE!");
         console.log("📝 COMO USAR: Escreva sua ordem dentro do arquivo 'prompt.txt' e salve.");
@@ -39,14 +39,8 @@ async function iniciarPinelope() {
         console.log("==========================================================\n");
 
     } catch (err) {
-        console.log("\n❌ [ERRO DE DIAGNÓSTICO DA PINELLOPE]:");
-        console.log("O script falhou ao carregar a IA interna.");
-        console.log("Motivo do erro:", err.message);
-        console.log("Abaixo está a pilha de travamento para investigação:\n");
-        console.error(err);
-        console.log("\n==========================================================");
-        console.log("⚠️ A janela foi segurada aberta pelo sistema de emergência.");
-        return; // Para a execução mas NÃO fecha o CMD
+        console.log("\n❌ [ERRO DE CARREGAMENTO]:", err.message);
+        return;
     }
     
     if (!fs.existsSync(caminhoPrompt)) {
@@ -69,20 +63,18 @@ async function verificarEProcessarPrompt() {
     console.log(`\n🔔 [DETECTADO]: Nova ordem encontrada no prompt.txt!`);
     const regrasSub15 = lerConfiguracaoSub15();
 
-    const mensagensChat = [
-        { role: 'system', content: `Você é a Pinelope.js, uma IA especialista em programação de servidores SA-MP e MTA. Diretrizes: ${regrasSub15}. Retorne APENAS o código fonte limpo.` },
-        { role: 'user', content: promptUsuario }
-    ];
+    const instrucaoCompleta = `Task: Write a clean code for SA-MP/MTA server based on these guidelines: ${regrasSub15}. User request: ${promptUsuario}. Output only code lines.`;
 
     try {
         if (!geradorIA) {
-            console.log("❌ Erro: O motor de IA não está carregado corretamente.");
+            console.log("❌ Erro: O motor de IA não está ativo.");
             return;
         }
 
-        const resultado = await geradorIA(mensagensChat, { max_new_tokens: 1200, temperature: 0.3 });
+        const resultado = await geradorIA(instrucaoCompleta, { max_new_tokens: 300, temperature: 0.3 });
         
         let codigoGerado = "";
+        // Correção de extração do array padrão dos Transformers para GPT2
         if (Array.isArray(resultado) && resultado[0] && resultado[0].generated_text) {
             codigoGerado = resultado[0].generated_text;
         } else if (resultado && resultado.generated_text) {
@@ -90,6 +82,9 @@ async function verificarEProcessarPrompt() {
         } else {
             codigoGerado = String(resultado);
         }
+
+        // Limpa a instrução inicial do output
+        codigoGerado = codigoGerado.replace(instrucaoCompleta, '').trim();
 
         const pastaFS = path.join(diretorioServidor, 'filterscripts');
         if (!fs.existsSync(pastaFS)) fs.mkdirSync(pastaFS);
@@ -108,12 +103,11 @@ async function verificarEProcessarPrompt() {
         }
 
         fs.writeFileSync(caminhoPrompt, "");
-        console.log("✅ [CONCLUÍDO]: Processo finalizado!");
+        console.log("✅ [CONCLUÍDO]: Processo finalizado com sucesso!");
 
     } catch (err) {
         console.error("❌ Erro durante o pipeline:", err.message);
     }
 }
 
-// Inicializa o processo protegido
 iniciarPinelope();
